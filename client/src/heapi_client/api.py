@@ -17,3 +17,19 @@ class API:
             raise RuntimeError(f"GET request to {url} timed out")
         except RequestException as e:
             raise RuntimeError(f"GET request to {url} failed: {str(e)}")
+
+def post(self, path: str, data=None, json=None):
+    url = f"{self.base_url}/{path.lstrip('/')}"
+    try:
+        response = requests.post(
+            url,
+            data=data,
+            json=json,
+            timeout=self.timeout
+        )
+        response.raise_for_status()
+        return response.json()
+    except Timeout:
+        raise RuntimeError(f"POST request to {url} timed out")
+    except RequestException as e:
+        raise RuntimeError(f"POST request to {url} failed: {str(e)}")
