@@ -1,35 +1,19 @@
-from __future__ import annotations
 from Pyfhel import PyCtxt
+
 from heapi_client.errors import CryptoError
-from ..errors import CryptoError
-
-BINARY_ENCODING = "hex"
 
 
-def serialize_ciphertext(ciphertext) -> dict:
-    """
-    Convert a Pyfhel ciphertext into the protocol request shape:
-    {
-      "encoding": "hex",
-      "payload": "..."
-    }
-    """
+def serialize_ciphertext(ct) -> dict:
     try:
-        ct_bytes = ciphertext.to_bytes()
+        return {
+            "encoding": "hex",
+            "payload": ct.to_bytes().hex(),
+        }
     except Exception as exc:
         raise CryptoError(f"Failed to serialize ciphertext: {exc}") from exc
 
-    return {
-        "encoding": BINARY_ENCODING,
-        "payload": ct_bytes.hex(),
-    }
-
 
 def deserialize_ciphertext(he, payload: str):
-    """
-    Convert the protocol response payload string back into a Pyfhel ciphertext.
-    The protocol uses hex-encoded ciphertext bytes.
-    """
     if not isinstance(payload, str):
         raise CryptoError("Ciphertext payload must be a string")
 
@@ -39,6 +23,8 @@ def deserialize_ciphertext(he, payload: str):
         raise CryptoError("Ciphertext payload is not valid hex") from exc
 
     try:
+        if hasattr(he, "from_bytes_ciphertext"):
+            return he.from_bytes_ciphertext(ct_bytes)
         return PyCtxt(pyfhel=he, bytestring=ct_bytes)
     except Exception as exc:
         raise CryptoError(f"Failed to deserialize ciphertext: {exc}") from exc

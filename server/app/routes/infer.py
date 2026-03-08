@@ -11,9 +11,12 @@ from server.core.model_registry.registry import MODEL_REGISTRY
 from server.core.protocol.envelope_validation import validate_envelope
 from server.core.security.rate_limits import enforce_infer_rate_limit
 from server.core.security.tenanting import get_tenant_id
+from server.core.crypto.crypto_backends.ckks_pyfhel.context import CKKS_CONTEXT, generate_ckks_context
 
 router = APIRouter()
 
+def get_crypto_context():
+    return CKKS_CONTEXT
 
 @router.post("/infer", status_code=status.HTTP_200_OK)
 def infer(

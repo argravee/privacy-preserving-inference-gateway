@@ -68,9 +68,7 @@ def load_model_registry() -> dict[tuple[str, str], ModelDefinition]:
 
         identity = (model_id, version)
         if identity in registry:
-            raise RegistryError(
-                f"Duplicate model identity detected: model_id={model_id}, version={version}"
-            )
+            raise RegistryError(f"Duplicate model identity: {model_id}:{version}")
 
         registry[identity] = ModelDefinition(
             model_id=model_id,

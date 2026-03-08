@@ -10,8 +10,6 @@
     "he_scheme",
     "encryption_parameters",
     "inference",
-    "parameters",
-    "activation_parameters",
     "constraints"
   ],
   "properties": {

@@ -15,13 +15,8 @@ def semantic_model_registry_validation(entry: dict[str, Any]) -> None:
     output_dimension = inference["output_dimension"]
     activation = inference["activation"]
 
-    parameters = entry["parameters"]
-    weights = parameters["weights"]
-    bias = parameters["bias"]
-
-    activation_parameters = entry["activation_parameters"]
-    activation_kind = activation_parameters["kind"]
-    coefficients = activation_parameters["coefficients"]
+    parameters = entry.get("parameters")
+    activation_parameters = entry.get("activation_parameters")
 
     constraints = entry["constraints"]
     max_batch_size = constraints["max_batch_size"]
@@ -69,33 +64,41 @@ def semantic_model_registry_validation(entry: dict[str, Any]) -> None:
     if activation != "polynomial_sigmoid_v1":
         raise ValueError(f"Unsupported activation: {activation}")
 
-    if activation_kind != activation:
-        raise ValueError(
-            f"activation_parameters.kind must match inference.activation, got {activation_kind}"
-        )
+    if parameters is not None:
+        weights = parameters["weights"]
+        bias = parameters["bias"]
 
-    if len(weights) != input_dimension:
-        raise ValueError(
-            f"weights length must equal input_dimension ({input_dimension}), got {len(weights)}"
-        )
+        if len(weights) != input_dimension:
+            raise ValueError(
+                f"weights length must equal input_dimension ({input_dimension}), got {len(weights)}"
+            )
 
-    if not all(isinstance(w, (int, float)) for w in weights):
-        raise ValueError("all weights must be numeric")
+        if not all(isinstance(w, (int, float)) for w in weights):
+            raise ValueError("all weights must be numeric")
 
-    if not isinstance(bias, (int, float)):
-        raise ValueError("bias must be numeric")
+        if not isinstance(bias, (int, float)):
+            raise ValueError("bias must be numeric")
 
-    if len(coefficients) != 3:
-        raise ValueError("polynomial_sigmoid_v1 requires exactly 3 coefficients")
+    if activation_parameters is not None:
+        activation_kind = activation_parameters["kind"]
+        coefficients = activation_parameters["coefficients"]
 
-    if not all(isinstance(c, (int, float)) for c in coefficients):
-        raise ValueError("activation coefficients must be numeric")
+        if activation_kind != activation:
+            raise ValueError(
+                f"activation_parameters.kind must match inference.activation, got {activation_kind}"
+            )
 
-    quadratic_coeff = coefficients[2]
-    required_depth = 2 if abs(quadratic_coeff) > 0 else 1
-    if max_multiplicative_depth < required_depth:
-        raise ValueError(
-            f"activation coefficients require max_multiplicative_depth >= {required_depth}"
-        )
+        if len(coefficients) != 3:
+            raise ValueError("polynomial_sigmoid_v1 requires exactly 3 coefficients")
+
+        if not all(isinstance(c, (int, float)) for c in coefficients):
+            raise ValueError("activation coefficients must be numeric")
+
+        quadratic_coeff = coefficients[2]
+        required_depth = 2 if abs(quadratic_coeff) > 0 else 1
+        if max_multiplicative_depth < required_depth:
+            raise ValueError(
+                f"activation coefficients require max_multiplicative_depth >= {required_depth}"
+            )
 
     return None

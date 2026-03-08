@@ -1,42 +1,47 @@
-from __future__ import annotations
-
+import json
+from pathlib import Path
 from typing import Any
+
+from jsonschema import ValidationError, validate
 
 from .api import API
 from .errors import SchemaValidationError
 
 
 class Infer:
-    def __init__(self, api: API) -> None:
+    def __init__(self, api: API, schema_path: str | Path | None = None):
         self.api = api
+        self.schema = None
+
+        if schema_path is not None:
+            with open(schema_path, "r", encoding="utf-8") as f:
+                self.schema = json.load(f)
 
     def submit(
             self,
             model_id: str,
             version: str,
-            batch_size: int,
             inputs: list[dict[str, Any]],
+            batch_size: int | None = None,
     ) -> dict[str, Any]:
-        if not model_id:
-            raise SchemaValidationError("model_id is required")
-        if not version:
-            raise SchemaValidationError("version is required")
-        if not isinstance(batch_size, int) or batch_size <= 0:
-            raise SchemaValidationError("batch_size must be a positive integer")
-        if not isinstance(inputs, list) or not inputs:
-            raise SchemaValidationError("inputs must be a non-empty list")
-
         payload = {
             "model_id": model_id,
             "version": version,
-            "batch_size": batch_size,
             "inputs": inputs,
         }
+        if batch_size is not None:
+            payload["batch_size"] = batch_size
+
+        if self.schema is not None:
+            try:
+                validate(payload, self.schema)
+            except ValidationError as exc:
+                raise SchemaValidationError(
+                    f"Infer request payload failed schema validation: {exc.message}",
+                    payload=payload,
+                ) from exc
 
         return self.api.post("/infer", json=payload)
 
     def get_job(self, job_id: str) -> dict[str, Any]:
-        if not job_id:
-            raise SchemaValidationError("job_id is required")
-
         return self.api.get(f"/jobs/{job_id}")

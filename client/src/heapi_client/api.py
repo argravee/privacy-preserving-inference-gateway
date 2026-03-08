@@ -23,12 +23,13 @@ class API:
 
     def get(self, path: str, headers: dict[str, str] | None = None):
         url = f"{self.base_url}/{path.lstrip('/')}"
+        request_kwargs = {"timeout": self.timeout}
+        merged_headers = self._merge_headers(headers)
+        if merged_headers:
+            request_kwargs["headers"] = merged_headers
+
         try:
-            response = requests.get(
-                url,
-                timeout=self.timeout,
-                headers=self._merge_headers(headers),
-            )
+            response = requests.get(url, **request_kwargs)
             response.raise_for_status()
             return response.json()
         except Timeout as exc:
@@ -49,14 +50,17 @@ class API:
 
     def post(self, path: str, data=None, json=None, headers: dict[str, str] | None = None):
         url = f"{self.base_url}/{path.lstrip('/')}"
+        request_kwargs = {
+            "data": data,
+            "json": json,
+            "timeout": self.timeout,
+        }
+        merged_headers = self._merge_headers(headers)
+        if merged_headers:
+            request_kwargs["headers"] = merged_headers
+
         try:
-            response = requests.post(
-                url,
-                data=data,
-                json=json,
-                timeout=self.timeout,
-                headers=self._merge_headers(headers),
-            )
+            response = requests.post(url, **request_kwargs)
             response.raise_for_status()
             return response.json()
         except Timeout as exc:

@@ -32,3 +32,13 @@ def generate_ckks_context(params) -> Pyfhel:
         qi_sizes=coeff_modulus_bits,
     )
     return he
+
+
+DEFAULT_CKKS_PARAMS = {
+    "scheme": "CKKS",
+    "poly_modulus_degree": 16384,
+    "coeff_modulus_bits": [60, 30, 30, 60],
+    "scale": 1073741824,
+}
+
+CKKS_CONTEXT = generate_ckks_context(DEFAULT_CKKS_PARAMS)
