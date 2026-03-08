@@ -82,7 +82,7 @@ Approximation error is expected under CKKS and is not treated as a protocol fail
 9. Client retrieves the result and decrypts locally
 
 ## Repository Structure
-
+```
 docs/
   api.md                      Human-readable protocol description
   api/examples/               Example protocol payloads
@@ -113,7 +113,7 @@ tests/
   sdk/                        SDK/unit tests
   server/                     Server/unit and route tests
   integration/                Live end-to-end protocol tests
-  
+  ```
 ## Protocol Artifacts
 The normative protocol artifacts are:
 
