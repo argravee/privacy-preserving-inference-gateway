@@ -2,67 +2,139 @@
 
 A protocol-first specification and reference implementation for privacy-preserving machine learning inference using homomorphic encryption.
 
-## Overview
+The system allows a client to discover supported models, construct a compatible CKKS session locally, encrypt inputs on the client side, submit ciphertexts to the server, and receive encrypted inference results for local decryption. The server never needs the client’s secret key and never receives plaintext inputs.
 
-This project defines a versioned protocol for encrypted machine learning inference and provides a Python reference implementation of that protocol.
+This repository focuses on protocol clarity, validation correctness, and implementation conformance.
 
-A client can:
+## Motivation
 
-1. discover supported models and their encryption requirements
-2. construct a compatible CKKS context locally
-3. encrypt input data on the client side
-4. submit ciphertexts to the server
-5. receive an encrypted inference result
-6. decrypt the result locally
+Encrypted inference systems can become ambiguous: protocol rules get mixed with backend details, validation becomes implicit, and clients become tightly coupled to a single implementation.
 
-The server never needs the client’s secret key and never receives plaintext inputs.
+This project instead defines a versioned wire contract first, then provides a Python reference implementation that demonstrates one valid way to satisfy that contract.
 
-This repository is focused on **protocol clarity, validation correctness, and implementation conformance**.
+The goal is to make encrypted inference easier to reason about, easier to test, and easier to implement correctly.
 
-## Intended Audience
+## At a Glance
 
-This specification is intended for:
-- Engineers building privacy-preserving ML systems
-- Researchers evaluating encrypted inference protocols
-- Teams implementing compatible clients, servers, or SDKs
+The client is responsible for:
 
-This repository aims to make encrypted inference easier to reason about and easier to implement correctly by emphasizing:
+- discovering model metadata
+- constructing a compatible CKKS session locally
+- encrypting input data locally
+- submitting ciphertexts
+- retrieving encrypted results
+- decrypting results locally
 
-- protocol stability
-- explicit structural contracts
-- strict validation before evaluation
-- clear separation between protocol and implementation details
-- backend/client decoupling
+The server is responsible for:
 
-## Current Status
+- exposing the protocol endpoints
+- validating request envelopes
+- validating ciphertext structure and compatibility
+- performing homomorphic evaluation
+- storing and returning encrypted results
 
-The repository currently includes:
+## Architecture
 
-- a versioned encrypted inference protocol
-- JSON Schemas for request, response, and error payloads
-- an OpenAPI 3.1 description of the HTTP surface
-- a Python reference server
-- a Python client/SDK
-- a CKKS reference backend using Pyfhel
-- automated tests across SDK, server, and live integration paths
+```mermaid
+flowchart LR
 
-A full live round-trip is working:
+    subgraph CLIENT["Client / SDK"]
+        direction TB
+        C1["Discovery Client<br/>GET /models"]
+        C2["Model Metadata"]
+        C3["CKKS Session Builder"]
+        C4["Local Encryption"]
+        C5["Inference Submitter<br/>POST /infer"]
+        C6["Jobs Client<br/>GET /jobs/{id}"]
+        C7["Local Decryption"]
+    end
 
-**discover model → build CKKS session → encrypt locally → submit ciphertext → server-side validate/evaluate → return ciphertext → decrypt locally**
+    subgraph SERVER["Server / Reference Backend"]
+        direction TB
+        S1["/models Route"]
+        S2["/infer Route"]
+        S3["/jobs/{id} Route"]
+        S4["Model Registry"]
+        S5["Envelope Validation"]
+        S6["Ciphertext Validation"]
+        S7["CKKS Backend"]
+        S8["HE Execution"]
+        S9["Job Store"]
+    end
 
-This is a **reference implementation**, not a production deployment.
+    C1 --> S1
+    S1 --> S4
+    S4 --> C2
+    C2 --> C3
+    C3 --> C4
+    C4 --> C5
 
-## Non-Goals
+    C5 --> S2
+    S2 --> S5
+    S5 --> S4
+    S5 --> S6
+    S6 --> S7
+    S7 --> S8
+    S8 --> S9
 
-This repository does **not** aim to:
+    C6 --> S3
+    S3 --> S9
+    S9 --> C7
+````
 
-- provide a production-ready serving platform
-- train or fine-tune machine learning models
-- handle key generation UX or key distribution workflows
-- expose cryptographic internals such as noise budgets to clients
-- guarantee exact decrypted numeric equality
+A more detailed description is available in [`docs/architecture.md`](docs/architecture.md).
 
-Approximation error is expected under CKKS and is not treated as a protocol failure.
+## Quick Start
+
+### 1. Create a virtual environment
+
+```bash
+python -m venv .venv
+```
+
+Activate it:
+
+**Windows PowerShell**
+
+```bash
+.venv\Scripts\Activate.ps1
+```
+
+**Linux / macOS**
+
+```bash
+source .venv/bin/activate
+```
+
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Run the reference server
+
+```bash
+uvicorn server.app.main:app --reload
+```
+
+The server will start at:
+
+```txt
+http://127.0.0.1:8000
+```
+
+### 4. Run tests
+
+```bash
+pytest
+```
+
+For live integration tests:
+
+```bash
+pytest tests/integration -v
+```
 
 ## High-Level Flow
 
@@ -71,20 +143,18 @@ Approximation error is expected under CKKS and is not treated as a protocol fail
 3. Client constructs a compatible CKKS session locally
 4. Client encrypts input features locally
 5. Client submits an inference request to `/infer`
-6. Server validates:
-   - envelope shape
-   - model/version identity
-   - batch constraints
-   - ciphertext structure and compatibility
+6. Server validates the request envelope, model identity, constraints, and ciphertext compatibility
 7. Server performs homomorphic evaluation
-8. Server stores and exposes the encrypted result via job/result flow
-9. Client retrieves the result and decrypts locally
+8. Server stores the encrypted result in job state
+9. Client retrieves the encrypted result and decrypts locally
 
 ## Repository Structure
-```
+
+```text
 docs/
   api.md                      Human-readable protocol description
   api/examples/               Example protocol payloads
+  architecture.md             Detailed architecture notes
 
 schemas/                      JSON Schemas for requests/responses/errors
 openapi.yaml                  OpenAPI 3.1 protocol definition
@@ -112,8 +182,10 @@ tests/
   sdk/                        SDK/unit tests
   server/                     Server/unit and route tests
   integration/                Live end-to-end protocol tests
-  ```
+```
+
 ## Protocol Artifacts
+
 The normative protocol artifacts are:
 
 * JSON Schemas
@@ -124,16 +196,23 @@ These define the wire contract.
 
 The reference backend is included to demonstrate one valid implementation of that contract.
 
-## Reference Implementation Notes
+## Current Status
 
-The current reference implementation uses:
+The repository currently includes:
 
-* **FastAPI** for the HTTP server
-* **Pyfhel / CKKS** for encrypted arithmetic
-* strict request and ciphertext validation before execution
-* a Python SDK that performs local encryption and local decryption
+* a versioned encrypted inference protocol
+* JSON Schemas for request, response, and error payloads
+* an OpenAPI 3.1 description of the HTTP surface
+* a Python reference server
+* a Python client/SDK
+* a CKKS reference backend using Pyfhel
+* automated tests across SDK, server, and live integration paths
 
-The current design is intentionally conservative about validation and rejection behavior.
+A full live round-trip is working:
+
+**discover model → build CKKS session → encrypt locally → submit ciphertext → validate and evaluate server-side → retrieve ciphertext result → decrypt locally**
+
+This is a reference implementation, not a production deployment.
 
 ## Security Model
 
@@ -145,7 +224,19 @@ The intended security posture is:
 * malformed or incompatible ciphertexts should be rejected before evaluation
 * model requirements are explicit in metadata rather than implied
 
-This repository is **not** a full production threat model or hardened deployment guide.
+This repository is not a full production threat model or hardened deployment guide.
+
+## Non-Goals
+
+This repository does not aim to:
+
+* provide a production-ready serving platform
+* train or fine-tune machine learning models
+* handle key generation UX or key distribution workflows
+* expose cryptographic internals such as noise budgets to clients
+* guarantee exact decrypted numeric equality
+
+Approximation error is expected under CKKS and is not treated as a protocol failure.
 
 ## Conformance
 
@@ -158,25 +249,26 @@ An implementation is considered protocol-compliant if it:
 
 Implementation details such as scheduling, persistence, or execution strategy are non-normative unless explicitly documented as part of the protocol.
 
-## What Still Remains
+## Future Goals
 
 The major next-step areas are:
 
 * stronger adversarial ciphertext hardening
 * fuller threat-model documentation
-* clearer architecture diagrams
-* demo and onboarding material
-* possible refinement of synchronous vs job-based execution semantics
-* production-oriented persistence/queueing if the project evolves beyond reference scope
+* refinement of synchronous versus job-based execution semantics
+* production-oriented persistence and queueing 
 
 ## Versioning
 
 The protocol uses semantic versioning at the API/protocol level.
 
 * breaking changes belong in a new major version
-* v1.x changes should preserve the documented wire contract unless explicitly versioned otherwise
-
+* minor versions should preserve the documented wire contract unless explicitly versioned otherwise
 
 ## License
 
 Licensed under the Apache License, Version 2.0.
+
+
+
+
