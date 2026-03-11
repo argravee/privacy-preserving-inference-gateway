@@ -1,4 +1,4 @@
-# Encrypted Inference API (v0.9)
+# Encrypted Inference API (v1.0.0)
 
 A protocol-first specification and reference implementation for privacy-preserving machine learning inference using homomorphic encryption.
 
@@ -255,12 +255,11 @@ An implementation is considered protocol-compliant if it:
 
 Implementation details such as scheduling, persistence, or execution strategy are non-normative unless explicitly documented as part of the protocol.
 
-## Future Goals
+## V1+ Goals
 
 The major next-step areas are:
 
 * stronger adversarial ciphertext hardening
-* fuller threat-model documentation
 * refinement of synchronous versus job-based execution semantics
 * production-oriented persistence and queueing 
 
