@@ -1,3 +1,6 @@
+![CI](https://github.com/argravee/encrypted-inference-api/actions/workflows/ci.yml/badge.svg)
+![coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)
+
 # Encrypted Inference API (v1.0.0)
 
 A protocol-first specification and reference implementation for privacy-preserving machine learning inference using homomorphic encryption.
