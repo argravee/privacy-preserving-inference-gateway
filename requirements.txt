@@ -7,3 +7,4 @@ PyYAML
 jsonschema
 pytest
 requests
+pytest-cov
